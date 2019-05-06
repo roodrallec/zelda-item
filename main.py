@@ -109,44 +109,44 @@ def main():
     img = cv2.imread(INVENTORY_IMAGE_PATH, cv2.IMREAD_COLOR)
     item_list = build_item_list(DATA_DIR)
     # Canny params
-    thresh = 1000
+    thresh = 900
     thresh_2 = thresh/3
-    elipse = (9, 9)
-    # Sim measure to use
-    sim_type = 'mse'
+    elipse = (5, 5)
 
     print("extracting coords")
     for x in range(GRID_COORDS[0][0], GRID_COORDS[1][0], GRID_SQUARE_SIZE_PX):
         for y in range(GRID_COORDS[0][1], GRID_COORDS[2][1], GRID_SQUARE_SIZE_PX):
             item_image = img[y:y + GRID_SQUARE_SIZE_PX, x:x + GRID_SQUARE_SIZE_PX]
             item = extract_item(item_image, thresh, thresh_2, elipse)
-
-            cv2.imshow("extraction", np.hstack([item_image, item]))
-            cv2.waitKey(0)
-
             best_sim = None
             best_sim_name = None
             best_sim_image = None
 
+            mses = [[mse(item, icon_image), icon_name] for icon_name, icon_image in item_list]
+            mses = sorted(mses, key=lambda x: x[0])
+            mse_rank_dict = {}
+            for idx, [mse_obj, name] in enumerate(mses):
+                mse_rank_dict[name] = idx
+
+            ssims = [[ssim(item, icon_image, multichannel=True, gaussian_weights=True), icon_name] for icon_name, icon_image in item_list]
+            ssims = sorted(ssims, key=lambda x: x[0], reverse=True)
+            ssim_rank_dict = {}
+            for idx, [mse_obj, name] in enumerate(ssims):
+                ssim_rank_dict[name] = idx
+
             for icon_name, icon_image in item_list:
-
-                ssim_sim = ssim(item, icon_image, multichannel=True)
-                mse_sim = mse(item, icon_image)
-
-                if sim_type == 'mse':
-                    sim = np.round(mse_sim, 2)
-                    is_best_sim = not best_sim or sim < best_sim
-                else:
-                    sim = np.round(ssim_sim, 2)
-                    is_best_sim = not best_sim or sim < best_sim
+                mse_rank = mse_rank_dict[icon_name]
+                ssim_rank = ssim_rank_dict[icon_name]
+                avg_rank = (mse_rank + ssim_rank) / 2
+                is_best_sim = not best_sim or avg_rank < best_sim
 
                 if is_best_sim:
-                    best_sim = sim
+                    best_sim = avg_rank
                     best_sim_name = icon_name
                     best_sim_image = icon_image
 
             print(best_sim)
-            cv2.imshow(best_sim_name, np.hstack([item_image, best_sim_image]))
+            cv2.imshow(best_sim_name, np.hstack([item_image, item, best_sim_image]))
             cv2.waitKey(0)
 
 
