@@ -112,6 +112,8 @@ def main():
     thresh = 1000
     thresh_2 = thresh/3
     elipse = (9, 9)
+    # Sim measure to use
+    sim_type = 'mse'
 
     print("extracting coords")
     for x in range(GRID_COORDS[0][0], GRID_COORDS[1][0], GRID_SQUARE_SIZE_PX):
@@ -122,20 +124,29 @@ def main():
             cv2.imshow("extraction", np.hstack([item_image, item]))
             cv2.waitKey(0)
 
-            max_sim = -1
-            max_sim_name = None
-            max_sim_image = None
+            best_sim = None
+            best_sim_name = None
+            best_sim_image = None
 
             for icon_name, icon_image in item_list:
 
-                sim = ssim(item, icon_image, multichannel=True)
-                sim = np.round(sim, 2)
-                if sim > max_sim:
-                    max_sim = sim
-                    max_sim_name = icon_name
-                    max_sim_image = icon_image
+                ssim_sim = ssim(item, icon_image, multichannel=True)
+                mse_sim = mse(item, icon_image)
 
-            cv2.imshow(str(max_sim) + max_sim_name, np.hstack([item_image, max_sim_image]))
+                if sim_type == 'mse':
+                    sim = np.round(mse_sim, 2)
+                    is_best_sim = not best_sim or sim < best_sim
+                else:
+                    sim = np.round(ssim_sim, 2)
+                    is_best_sim = not best_sim or sim < best_sim
+
+                if is_best_sim:
+                    best_sim = sim
+                    best_sim_name = icon_name
+                    best_sim_image = icon_image
+
+            print(best_sim)
+            cv2.imshow(best_sim_name, np.hstack([item_image, best_sim_image]))
             cv2.waitKey(0)
 
 
